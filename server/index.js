@@ -2,8 +2,11 @@
 const axios = require ('axios');
 const cheerio = require('cheerio');  // new addition
 const express = require('express');
+const { get } = require('jquery');
 const PORT = 8000;
+const puppeteer = require('puppeteer');
 const app = express();
+
 
 /**
  * 
@@ -13,7 +16,6 @@ const app = express();
 async function getTitle(url) {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
-    console.log($('h1').text()); // prints title of page (name of recipe)
     return $('h1').text();
 }
 /**
@@ -24,12 +26,28 @@ async function getTitle(url) {
 async function getIngredients(url) {
     const { data } = await axios.get(url);
     const $ = cheerio.load(data);
-    // prints list of ingredients 
-    $("div[class*='ingredient'] li").each(function() {
-       console.log($(this).text());
-    });
     return $("div[class*='ingredient'] li").text();
 }
+
+async function getDirections(url) {
+    const { data } = await axios.get(url);
+    const $ = cheerio.load(data);
+
+    // Select all text & list items within div elements with class containing "steps", "directions", or "instructions",
+    let steps = $('div[class*="steps"] p, div[class*="directions"] p, div[class*="instructions"] p, div[class*="steps"] li, div[class*="directions"] li, div[class*="instructions"] li');
+    
+    const stepsArr = [];
+    steps.each(function() {
+      if (!$(this).text().includes('img')) {
+        stepsArr.push($(this).text().replaceAll('\n', ''));
+      }
+
+    })
+    console.log(stepsArr);
+    return stepsArr;
+}
+
+getDirections("https://www.allrecipes.com/recipe/275576/easy-air-fryer-pork-chops/");
 app.get('/title', function(req,res) {
     getTitle("https://www.allrecipes.com/recipe/275576/easy-air-fryer-pork-chops/").then(result => {
     res.send(result);
@@ -42,10 +60,13 @@ app.get('/ingredients', function(req,res) {
 }).catch(err => console.log(err));
 })
 
-console.log('---------');
 
-getTitle("https://www.recipetineats.com/crispy-pork-belly-banh-mi/#wprm-recipe-container-141765").then(result => {
-    //console.log(result)
+app.get('directions', function(req,res) {
+  getDirections("https://www.recipetineats.com/crispy-pork-belly-banh-mi/#wprm-recipe-container-141765").then(result => {
+    res.send(result);
 }).catch(err => console.log(err));
 
-app.listen(PORT, () => console.log('App available on http://localhost:3000'))
+})
+
+
+//app.listen(PORT, () => console.log('App available on http://localhost:3000'))
