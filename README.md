@@ -10,3 +10,10 @@ steps?
 5. bonus: get picture
 6. ability to edit
 7. create new page with that info
+8. ability to upload recipe
+
+ideas
+- add nutrition facts
+- find servings
+- scrape picture
+- ability to upload recipe

@@ -43,7 +43,6 @@ async function getDirections(url) {
       }
 
     })
-    console.log(stepsArr);
     return stepsArr;
 }
 
