@@ -1,84 +1,60 @@
-"use strict";
-const axios = require ('axios');
-const cheerio = require('cheerio');  // new addition
+const fetch = require('node-fetch');
 const express = require('express');
 const PORT = 8000;
 const app = express();
 const cors = require('cors');
+const token = require('./config.js');
 app.use(cors());
 app.use(express.json());
 
+var url = 'https://api.diffbot.com/v3/analyze?token=' + token.diffbotToken+ '&url=';
+const options = {method: 'GET', headers: {accept: 'application/json'}};
 
-/**
- * 
- * @param {*} url url to scrape
- * @returns title of page
- */
-async function getTitle(url) {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
-    return $('h1').text();
+async function getPage(page) {
+  const urlWithPage = url + page; // Assuming `url` is defined elsewhere
+  try {
+    const response = await fetch(urlWithPage, options);
+    const json = await response.json();
+    return json; // Return the parsed JSON
+  } catch (err) {
+    console.error('Error:', err);
+    throw err; // Rethrow the error to handle it in the calling function
+  }
 }
-/**
- * 
- * @param {*} url url to scrape
- * @returns ingredients of recipe
- */
-async function getIngredients(url) {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
-    const ingredientArr = [];
-    let ingredients = $("div[class*='ingredient'] li");
-    ingredients.each(function() {
-      ingredientArr.push($(this).text().replaceAll('\n',''));
-    })
-    return ingredientArr;
-}
-
-async function getDirections(url) {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
-
-    // Select all text & list items within div elements with class containing "steps", "directions", or "instructions",
-    let steps = $('div[class*="steps"] p, div[class*="directions"] p, div[class*="instructions"] p, div[class*="steps"] li, div[class*="directions"] li, div[class*="instructions"] li');
-    
-    const stepsArr = [];
-    steps.each(function() {
-      if (!$(this).text().includes('img')) {
-        stepsArr.push($(this).text().replaceAll('\n', ''));
+async function getInfo(page) {
+  const urlWithPage = url + page; // Assuming `url` is defined elsewhere
+  try {
+    const response = await fetch(urlWithPage, options);
+    const json = await response.json();
+    const info = {
+      title: json.objects[0].title,
+      ingredients: json.objects[0].ingredients,
+      servings : json.objects[0].servings,
+      instructions : json.objects[0].instructions,
+      notes: json.objects[0].notes,
+      nutrition: json.objects[0].nutrition,
+      recipe: json.objects[0].recipe,
+      time: json.objects[0].time,
+      prep: json.objects[0].prep,
+      cook: json.objects[0].cook,
+      total: json.objects[0].total
       }
-
-    })
-    return stepsArr;
+    return info; // Return the parsed JSON
+  } catch (err) {
+    console.error('Error:', err);
+    throw err; // Rethrow the error to handle it in the calling function
+  }
 }
 
-app.get('/', (req,res)=> {
-  getIngredients("https://www.recipetineats.com/crispy-pork-belly-banh-mi/#wprm-recipe-container-141765").then(result => {
-  res.send(result);
-}).catch(err => console.log(err));}
-)
-app.post('/name', async(req,res) => {
-    let url = req.body.url;
-    console.log('here');
-    await getTitle(url).then(result => {
-    res.send(result);
-}).catch(err => console.log(err));
-})
-
-app.post('/ingredients', async(req,res)  =>{
-  let url = req.body.url;
-  await getIngredients(url).then(result => {
-    res.send(result);
-}).catch(err => console.log(err));
-})
-
-
-app.post('/directions', async(req,res) => {
-  let url = req.body.url;
-  await getDirections(url).then(result => {
-    res.send(result);
-}).catch(err => console.log(err));
-
+app.get('/', async(req,res)=> {
+  try {
+    const result = await getInfo('https://www.recipetineats.com/honey-mustard-baked-chicken-drumsticks/#wprm-recipe-container-29187');
+    console.log(result); // This should now log the fetched JSON
+    res.send(result); // Send the result as the response
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('An error occurred while fetching the page');
+  }
 })
 
 
